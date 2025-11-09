@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hotel Front Desk Board</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#3498db">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --green:#2ecc71;
+    --yellow:#f1c40f;
+    --red:#e74c3c;
+    --gray:#95a5a6;
+    --blue:#3498db;
+    --card-bg:#ffffff;
+    --card-border:#dfe6e9;
+    --text:#2d3436;
+    --muted:#636e72;
+  }
+  *{box-sizing:border-box}
+  body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; color:var(--text); background:#f6f8fb; }
+  header{ position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid #eceff1; padding:10px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  h1{font-size:18px; margin:0 8px 0 0;}
+  .pill{display:inline-flex; align-items:center; gap:8px; background:#f0f3f6; padding:8px 10px; border-radius:8px;}
+  input[type="search"], select{ font-size:14px; padding:10px 12px; border:1px solid #dfe6e9; border-radius:8px; outline:none; min-width:200px; background:#fff; }
+  button{ border:0; padding:10px 14px; border-radius:8px; font-weight:600; cursor:pointer; }
+  .btn{background:var(--blue); color:#fff;} .btn-outline{background:#fff; border:1px solid #dfe6e9; color:#2d3436;} .btn-ghost{background:transparent; color:var(--muted);}
+  .toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  .board{ padding:16px; display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .room{ background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:10px; cursor:pointer; display:flex; flex-direction:column; gap:6px; position:relative; min-height:132px; box-shadow:0 1px 0 rgba(0,0,0,.02); }
+  .room:hover{box-shadow:0 4px 16px rgba(0,0,0,.06)}
+  .room .badge{ position:absolute; top:10px; right:10px; padding:4px 8px; border-radius:999px; font-size:12px; color:#fff; font-weight:700; }
+  .status-green{background:var(--green)} .status-yellow{background:var(--yellow); color:#000 !important} .status-red{background:var(--red)} .status-gray{background:var(--gray)}
+  .roomnum{font-weight:800; font-size:18px; letter-spacing:.5px;}
+  .name{font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .muted{color:var(--muted); font-size:12px;}
+  .left-ar{position:absolute; left:10px; bottom:10px; font-size:12px; font-weight:800;}
+  .right-price{position:absolute; right:10px; bottom:10px; font-size:14px; font-weight:800; text-align:right;}
+  .subline{position:absolute; right:10px; bottom:28px; font-size:11px; color:var(--muted);}
+  .persons{font-size:12px;}
+  .legend{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .dot{width:10px; height:10px; border-radius:50%}
+  .flex{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .spacer{flex:1}
+  dialog{border:0; border-radius:16px; width:min(780px, 96vw); padding:0; box-shadow:0 12px 48px rgba(0,0,0,.2);}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .sheet{padding:16px 16px 20px; background:#fff; border-radius:16px;}
+  .sheet h2{margin:0 0 12px 0; font-size:18px}
+  .grid{display:grid; gap:10px; grid-template-columns:repeat(2, minmax(0,1fr));}
+  .grid .full{grid-column:1 / -1}
+  label{font-size:12px; color:#57606a; font-weight:700; letter-spacing:.03em}
+  input, textarea, select{ width:100%; padding:10px 12px; border:1px solid #dfe6e9; border-radius:10px; font-size:14px; background:#fff; }
+  textarea{min-height:70px; resize:vertical}
+  .actions{display:flex; gap:8px; justify-content:flex-end; margin-top:12px}
+  .small{font-size:12px; color:#57606a}
+</style>
+</head>
+<body>
+  <header>
+    <h1 id="hotelTitle">Front Desk Board</h1>
+    <div class="pill legend">
+      <div class="flex"><span class="dot" style="background:var(--green)"></span> Green = In‑House</div>
+      <div class="flex"><span class="dot" style="background:var(--yellow)"></span> Yellow = Reserved</div>
+      <div class="flex"><span class="dot" style="background:var(--red)"></span> Red = Dirty</div>
+      <div class="flex"><span class="dot" style="background:var(--gray)"></span> Gray = Vacant/Clean</div>
+    </div>
+
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Search room or guest…" />
+      <select id="filter">
+        <option value="all">All statuses</option>
+        <option value="green">In‑House</option>
+        <option value="yellow">Reserved</option>
+        <option value="red">Dirty</option>
+        <option value="gray">Vacant/Clean</option>
+      </select>
+      <button class="btn-outline" id="addRoom">Add room</button>
+      <div class="spacer"></div>
+      <button class="btn-ghost" id="exportBtn">Export JSON</button>
+      <label class="btn-outline" for="importFile" style="cursor:pointer;">Import JSON</label>
+      <input id="importFile" type="file" accept="application/json" style="display:none" />
+      <button class="btn" id="resetBtn" title="Reset to defaults">Reset</button>
+      <button class="btn-outline" id="settingsBtn" title="Owner settings">Settings</button>
+    </div>
+  </header>
+
+  <main class="board" id="board"></main>
+
+  <!-- Room dialog -->
+  <dialog id="roomDialog">
+    <form method="dialog" class="sheet" id="roomForm">
+      <h2>Room <span id="dlgRoomNum"></span></h2>
+      <div class="grid">
+        <div><label>Guest name</label><input id="f_guest" placeholder="Name" /></div>
+        <div><label>Persons</label><input id="f_persons" type="number" min="1" step="1" placeholder="1" /></div>
+        <div><label>Price per night</label><input id="f_price" type="number" min="0" step="500" placeholder="0" /></div>
+        <div><label>Nights</label><input id="f_nights" type="number" min="1" step="1" placeholder="1" /></div>
+        <div><label>Amount Paid</label><input id="f_amountPaid" type="number" min="0" step="500" placeholder="0" /></div>
+        <div><label>Paid? (Arabic)</label>
+          <select id="f_paid">
+            <option value="unpaid">غير مدفوع</option>
+            <option value="paid">مدفوع</option>
+          </select>
+        </div>
+        <div><label>Phone</label><input id="f_phone" placeholder="+964" /></div>
+        <div><label>Car number</label><input id="f_car" placeholder="Car No." /></div>
+        <div><label>Entry date</label><input id="f_entryDate" type="date" /></div>
+        <div><label>Entry time</label><input id="f_entryTime" type="time" /></div>
+        <div class="full"><label>Notes</label><textarea id="f_notes" placeholder="Any comment"></textarea></div>
+      </div>
+      <div class="actions">
+        <div style="margin-right:auto;display:flex;gap:8px;align-items:center;">
+          <span class="small">Total = Price × Nights</span>
+          <strong id="liveTotal">0</strong>
+          <span class="small">• Balance</span>
+          <strong id="liveBalance">0</strong>
+        </div>
+        <button class="btn-outline" id="btnInvoice">Invoice</button>
+        <button class="btn-outline" value="cancel">Close</button>
+        <button class="btn-outline" id="actReserve">Reserve</button>
+        <button class="btn-outline" id="actCheckIn">Check In</button>
+        <button class="btn-outline" id="actMarkClean">Mark Clean</button>
+        <button class="btn-outline" id="actDirty">Mark Dirty</button>
+        <button class="btn" id="actCheckout">Check Out → Dirty</button>
+        <button class="btn" id="saveRoom">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings dialog (PIN-protected) -->
+  <dialog id="settingsDialog">
+    <form method="dialog" class="sheet" id="settingsForm">
+      <h2>Owner Settings</h2>
+      <div class="grid">
+        <div class="full"><label>Hotel name (shown in header & invoice)</label><input id="s_hotel" placeholder="Your Hotel Name" /></div>
+        <div><label>Currency label</label><input id="s_currency" placeholder="IQD" /></div>
+        <div><label>PIN (4 digits)</label><input id="s_pin" placeholder="0000" maxlength="4" /></div>
+        <div><label>Tax %</label><input id="s_tax" type="number" min="0" step="0.1" placeholder="0" /></div>
+        <div><label>Service %</label><input id="s_service" type="number" min="0" step="0.1" placeholder="0" /></div>
+      </div>
+      <div class="actions">
+        <div class="small" style="margin-right:auto;">PIN protects this settings panel only. For stronger security, ask to add server login.</div>
+        <button class="btn-outline" value="cancel">Close</button>
+        <button class="btn" id="saveSettings">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- PIN gate on load -->
+  <dialog id="pinDialog">
+    <form method="dialog" class="sheet" id="pinForm">
+      <h2>Enter PIN</h2>
+      <p class="small">Default: 0000 (you can change it in Settings)</p>
+      <input id="pinInput" maxlength="4" placeholder="****" />
+      <div class="actions">
+        <button class="btn" id="pinOk">Unlock</button>
+      </div>
+    </form>
+  </dialog>
+
+<script>
+// ---- Settings (owner) ----
+const settingsKey = "frontdesk_settings_v4";
+const Settings = {
+  load(){
+    const raw = localStorage.getItem(settingsKey);
+    if(!raw){
+      const def = { hotel:"Front Desk Board", currency:"IQD", pin:"0000", tax:0, service:0 };
+      localStorage.setItem(settingsKey, JSON.stringify(def));
+      return def;
+    }
+    try { return JSON.parse(raw); } catch { return { hotel:"Front Desk Board", currency:"IQD", pin:"0000", tax:0, service:0 }; }
+  },
+  save(s){ localStorage.setItem(settingsKey, JSON.stringify(s)); }
+};
+let settings = Settings.load();
+document.getElementById("hotelTitle").textContent = settings.hotel || "Front Desk Board";
+
+// ---- Data store ----
+const DEFAULT_ROOMS = [101,102,103,104,105,106,201,202,203,204,205,206,301,302,303,304,305,306];
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function nowHM(){ const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function num(x){ const n=Number(x); return isFinite(n)?n:0; }
+function currency(n){ return Number(n||0).toLocaleString() + " " + (settings.currency||""); }
+
+function newRoomState(n){
+  return { roomNumber:String(n), status:"gray", guestName:"", persons:"", price:"", nights:"", amountPaid:"", paid:"unpaid",
+    phone:"", car:"", entryDate:"", entryTime:"", notes:"", history:[] };
+}
+const storeKey = "hotelFrontDesk_v4";
+const Store = {
+  load(){
+    let raw = localStorage.getItem(storeKey);
+    if(!raw){
+      // migrate from older keys
+      const legacy = localStorage.getItem("hotelFrontDesk_v3")||localStorage.getItem("hotelFrontDesk_v2")||localStorage.getItem("hotelFrontDesk_v1");
+      if(legacy){ try{ const v=JSON.parse(legacy); localStorage.setItem(storeKey, JSON.stringify(v)); raw=JSON.stringify(v);}catch{} }
+    }
+    if(!raw){ const init=DEFAULT_ROOMS.map(newRoomState); localStorage.setItem(storeKey, JSON.stringify(init)); return init; }
+    try { return JSON.parse(raw); } catch { const init=DEFAULT_ROOMS.map(newRoomState); localStorage.setItem(storeKey, JSON.stringify(init)); return init; }
+  },
+  save(d){ localStorage.setItem(storeKey, JSON.stringify(d)); },
+  export(){ const data = localStorage.getItem(storeKey) || "[]"; const blob=new Blob([data], {type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="frontdesk_data.json"; a.click(); URL.revokeObjectURL(a.href); },
+  import(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!Array.isArray(d)) throw new Error("Invalid file"); localStorage.setItem(storeKey, JSON.stringify(d)); res(d);}catch(e){rej(e);} }; r.onerror=rej; r.readAsText(file); }); },
+  reset(){ const d=DEFAULT_ROOMS.map(newRoomState); localStorage.setItem(storeKey, JSON.stringify(d)); return d; }
+};
+let state = Store.load();
+
+// ---- UI ----
+const board = document.getElementById("board");
+const search = document.getElementById("search");
+const filterSel = document.getElementById("filter");
+function arabicPaid(p){ return p==="paid" ? "مدفوع" : "غير مدفوع"; }
+function statusLabel(s){ return s==="green" ? "In‑House" : s==="yellow" ? "Reserved" : s==="red" ? "Dirty" : "Vacant"; }
+function total(r){ return num(r.price)*num(r.nights); }
+function balance(r){ return Math.max(0, total(r) - num(r.amountPaid)); }
+
+function render(){
+  board.innerHTML = "";
+  const q=(search.value||"").toLowerCase().trim(); const f=filterSel.value;
+  state.slice().sort((a,b)=>Number(a.roomNumber)-Number(b.roomNumber))
+    .filter(r => (!q || r.roomNumber.includes(q) || (r.guestName||"").toLowerCase().includes(q)) && (f==="all" || r.status===f))
+    .forEach(r => {
+      const t = total(r);
+      const card = document.createElement("div"); card.className="room";
+      const badge=document.createElement("div"); badge.className="badge status-"+r.status; badge.textContent=statusLabel(r.status); card.appendChild(badge);
+      const roomnum=document.createElement("div"); roomnum.className="roomnum"; roomnum.textContent=r.roomNumber; card.appendChild(roomnum);
+      const name=document.createElement("div"); name.className="name"; name.textContent=r.guestName||"—"; card.appendChild(name);
+      const persons=document.createElement("div"); persons.className="persons muted"; persons.textContent=r.persons ? (r.persons + " persons") : ""; card.appendChild(persons);
+      const subline=document.createElement("div"); subline.className="subline";
+      if(num(r.price) && num(r.nights)){ subline.textContent = `${Number(r.price).toLocaleString()} × ${r.nights}`; }
+      else if(num(r.price)){ subline.textContent = `${Number(r.price).toLocaleString()} per night`; }
+      card.appendChild(subline);
+      const left=document.createElement("div"); left.className="left-ar"; left.textContent=arabicPaid(r.paid); card.appendChild(left);
+      const right=document.createElement("div"); right.className="right-price"; right.textContent = t ? currency(t) : (num(r.price)? currency(r.price) : ""); card.appendChild(right);
+      const sub=document.createElement("div"); sub.className="muted";
+      const parts=[]; if(r.entryDate) parts.push(r.entryDate); if(r.entryTime) parts.push(r.entryTime); if(r.nights) parts.push(r.nights + " nights"); sub.textContent=parts.join(" • "); card.appendChild(sub);
+      card.addEventListener("click", ()=> openDialog(r.roomNumber));
+      board.appendChild(card);
+    });
+}
+
+// ---- Room dialog ----
+const dlg = document.getElementById("roomDialog");
+const f_guest = document.getElementById("f_guest");
+const f_persons = document.getElementById("f_persons");
+const f_price = document.getElementById("f_price");
+const f_nights = document.getElementById("f_nights");
+const f_amountPaid = document.getElementById("f_amountPaid");
+const f_paid = document.getElementById("f_paid");
+const f_phone = document.getElementById("f_phone");
+const f_car = document.getElementById("f_car");
+const f_entryDate = document.getElementById("f_entryDate");
+const f_entryTime = document.getElementById("f_entryTime");
+const f_notes = document.getElementById("f_notes");
+const dlgRoomNum = document.getElementById("dlgRoomNum");
+const liveTotal = document.getElementById("liveTotal");
+const liveBalance = document.getElementById("liveBalance");
+const btnInvoice = document.getElementById("btnInvoice");
+let currentRoom = null;
+
+function getRoom(num){ return state.find(r => r.roomNumber === String(num)); }
+function updateLive(){ const t=num(f_price.value)*num(f_nights.value); const b=Math.max(0, t - num(f_amountPaid.value)); liveTotal.textContent = currency(t); liveBalance.textContent = currency(b); }
+["input","change"].forEach(evt => [f_price,f_nights,f_amountPaid].forEach(el => el.addEventListener(evt, updateLive)));
+
+function fillForm(r){
+  dlgRoomNum.textContent=r.roomNumber; f_guest.value=r.guestName||""; f_persons.value=r.persons||""; f_price.value=r.price||""; f_nights.value=r.nights||"";
+  f_amountPaid.value=r.amountPaid||""; f_paid.value=r.paid||"unpaid"; f_phone.value=r.phone||""; f_car.value=r.car||""; f_entryDate.value=r.entryDate||"";
+  f_entryTime.value=r.entryTime||""; f_notes.value=r.notes||""; updateLive();
+}
+function readForm(r){
+  r.guestName=f_guest.value.trim(); r.persons=f_persons.value; r.price=f_price.value; r.nights=f_nights.value; r.amountPaid=f_amountPaid.value;
+  r.paid=f_paid.value; r.phone=f_phone.value.trim(); r.car=f_car.value.trim(); r.entryDate=f_entryDate.value; r.entryTime=f_entryTime.value; r.notes=f_notes.value.trim();
+}
+function openDialog(num){ currentRoom=getRoom(num); fillForm(currentRoom); dlg.showModal(); }
+function pushHistory(r,action){ r.history.push({ts:new Date().toISOString(), action, guest:r.guestName, price:r.price, nights:r.nights, amountPaid:r.amountPaid, paid:r.paid, status:r.status}); }
+
+document.getElementById("actReserve").addEventListener("click", (e)=>{ e.preventDefault(); if(!currentRoom) return; readForm(currentRoom); currentRoom.status="yellow"; if(!currentRoom.entryDate) currentRoom.entryDate=todayISO(); Store.save(state); render(); pushHistory(currentRoom,"reserve"); });
+document.getElementById("actCheckIn").addEventListener("click", (e)=>{ e.preventDefault(); if(!currentRoom) return; readForm(currentRoom); currentRoom.status="green"; if(!currentRoom.entryDate) currentRoom.entryDate=todayISO(); if(!currentRoom.entryTime) currentRoom.entryTime=nowHM(); Store.save(state); render(); pushHistory(currentRoom,"checkin"); });
+document.getElementById("actCheckout").addEventListener("click", (e)=>{ e.preventDefault(); if(!currentRoom) return; readForm(currentRoom); currentRoom.status="red"; pushHistory(currentRoom,"checkout"); Store.save(state); render(); });
+document.getElementById("actDirty").addEventListener("click", (e)=>{ e.preventDefault(); if(!currentRoom) return; readForm(currentRoom); currentRoom.status="red"; Store.save(state); render(); pushHistory(currentRoom,"dirty"); });
+document.getElementById("actMarkClean").addEventListener("click", (e)=>{ e.preventDefault(); if(!currentRoom) return; readForm(currentRoom); currentRoom.status="gray"; Store.save(state); render(); pushHistory(currentRoom,"clean"); });
+document.getElementById("saveRoom").addEventListener("click", (e)=>{ e.preventDefault(); if(!currentRoom) return; readForm(currentRoom); Store.save(state); render(); dlg.close(); });
+
+// ---- Invoice ----
+btnInvoice.addEventListener("click", (e)=>{
+  e.preventDefault(); if(!currentRoom) return; readForm(currentRoom);
+  const r=currentRoom; const t=total(r); const bal=balance(r);
+  const taxAmt = Math.round(t * (num(settings.tax)/100));
+  const svcAmt = Math.round(t * (num(settings.service)/100));
+  const grand = t + taxAmt + svcAmt;
+  const paid = num(r.amountPaid);
+  const due = Math.max(0, grand - paid);
+  const win = window.open("", "_blank");
+  win.document.write(`<!DOCTYPE html><html><head><meta charset='utf-8'><title>Invoice — Room ${r.roomNumber}</title>
+  <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; margin:24px; color:#2d3436}
+  h1{font-size:22px;margin:0 0 6px}.muted{color:#666;font-size:12px}.row{display:flex;justify-content:space-between;gap:12px;margin:8px 0}
+  table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #e0e0e0;padding:8px;text-align:left;font-size:14px}tfoot td{font-weight:800}
+  .right{text-align:right}.ar{font-weight:800}.print{margin-top:16px}@media print {.print{display:none}}</style></head><body>
+  <h1>${settings.hotel || "Invoice"}</h1><div class="muted">Date: ${new Date().toLocaleString()}</div>
+  <div class="row"><div><div><strong>Room:</strong> ${r.roomNumber}</div><div><strong>Guest:</strong> ${r.guestName||"-"}</div><div><strong>Persons:</strong> ${r.persons||"-"}</div><div><strong>Phone:</strong> ${r.phone||"-"}</div><div><strong>Car No.:</strong> ${r.car||"-"}</div></div>
+  <div><div><strong>Status:</strong> ${r.status}</div><div><strong>Entry:</strong> ${r.entryDate||"-"} ${r.entryTime||""}</div><div><strong>Paid (Arabic):</strong> <span class="ar">${r.paid==="paid"?"مدفوع":"غير مدفوع"}</span></div></div></div>
+  <table><thead><tr><th>Description</th><th class="right">Rate (${settings.currency||""})</th><th class="right">Nights</th><th class="right">Total (${settings.currency||""})</th></tr></thead>
+  <tbody><tr><td>Room ${r.roomNumber} — ${r.guestName||"Guest"}</td><td class="right">${Number(num(r.price)).toLocaleString()}</td><td class="right">${num(r.nights)}</td><td class="right">${Number(t).toLocaleString()}</td></tr></tbody>
+  <tfoot>
+    <tr><td colspan="3" class="right">Tax (${num(settings.tax)}%)</td><td class="right">${Number(taxAmt).toLocaleString()}</td></tr>
+    <tr><td colspan="3" class="right">Service (${num(settings.service)}%)</td><td class="right">${Number(svcAmt).toLocaleString()}</td></tr>
+    <tr><td colspan="3" class="right">Grand Total</td><td class="right">${Number(grand).toLocaleString()}</td></tr>
+    <tr><td colspan="3" class="right">Amount Paid</td><td class="right">${Number(paid).toLocaleString()}</td></tr>
+    <tr><td colspan="3" class="right">Balance Due</td><td class="right">${Number(due).toLocaleString()}</td></tr>
+  </tfoot></table>
+  <div style="margin-top:10px"><strong>Notes:</strong> ${r.notes||"-"}</div><div class="print"><button onclick="window.print()">Print / Save as PDF</button></div>
+  </body></html>`); win.document.close(); setTimeout(()=>{ try{win.focus(); win.print();}catch(e){} }, 300);
+});
+
+// ---- Toolbar actions ----
+document.getElementById("addRoom").addEventListener("click", ()=>{ const next=prompt("Enter new room number:"); if(!next) return; if(state.some(r=>r.roomNumber===String(next))){ alert("Room already exists."); return; } state.push(newRoomState(next)); Store.save(state); render(); });
+document.getElementById("exportBtn").addEventListener("click", ()=> Store.export());
+document.getElementById("importFile").addEventListener("change", async (e)=>{ const file=e.target.files[0]; if(!file) return; try{ state=await Store.import(file); render(); }catch(err){ alert("Import failed: " + err.message);} finally{ e.target.value=""; } });
+document.getElementById("resetBtn").addEventListener("click", ()=>{ if(confirm("Reset all rooms to defaults?")){ state=Store.reset(); render(); }});
+search.addEventListener("input", render); filterSel.addEventListener("change", render);
+
+// ---- Settings dialog logic ----
+const sDlg = document.getElementById("settingsDialog");
+const sForm = document.getElementById("settingsForm");
+const s_hotel = document.getElementById("s_hotel");
+const s_currency = document.getElementById("s_currency");
+const s_pin = document.getElementById("s_pin");
+const s_tax = document.getElementById("s_tax");
+const s_service = document.getElementById("s_service");
+function fillSettings(){ s_hotel.value=settings.hotel||""; s_currency.value=settings.currency||"IQD"; s_pin.value=settings.pin||"0000"; s_tax.value=settings.tax||0; s_service.value=settings.service||0; }
+function readSettings(){ settings.hotel=s_hotel.value.trim()||"Front Desk Board"; settings.currency=s_currency.value.trim()||"IQD"; settings.pin=(s_pin.value||"0000").slice(0,4); settings.tax=Number(s_tax.value||0); settings.service=Number(s_service.value||0); Settings.save(settings); document.getElementById("hotelTitle").textContent=settings.hotel; render(); }
+document.getElementById("saveSettings").addEventListener("click", (e)=>{ e.preventDefault(); readSettings(); sDlg.close(); });
+
+document.getElementById("settingsBtn").addEventListener("click", ()=>{
+  // ask for pin first
+  const pin = prompt("Enter PIN to open settings:");
+  if(pin === settings.pin){ fillSettings(); sDlg.showModal(); }
+  else if(pin !== null){ alert("Wrong PIN."); }
+});
+
+// ---- PIN gate on load ----
+const pinDlg = document.getElementById("pinDialog");
+const pinInput = document.getElementById("pinInput");
+document.getElementById("pinOk").addEventListener("click",(e)=>{
+  e.preventDefault();
+  if(pinInput.value === settings.pin){ pinDlg.close(); }
+  else { alert("Wrong PIN"); }
+});
+
+window.addEventListener('load', ()=>{
+  // show gate only if pin set to something (default 0000 also gates)
+  pinDlg.showModal();
+  render();
+});
+
+// PWA: register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
+  });
+}
+</script>
+</body>
+</html>
